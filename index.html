@@ -332,7 +332,7 @@ function defaultBatch(n) {
 
 let state = (() => {
   try { const d = localStorage.getItem(KEY); if (d) return JSON.parse(d); } catch(e) {}
-  return { names: ['Player 1', 'Player 2', 'Player 3'], batches: [defaultBatch(1)] };
+  return { names: ['Badrinath', 'Abishek', 'Arvind'], batches: [defaultBatch(1)] };
 })();
 
 function save() { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch(e) {} }
