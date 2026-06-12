@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>⚽ World Cup Predictor</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --green: #1a7a4a;
+    --green-light: #e8f5ee;
+    --green-mid: #2d9e62;
+    --red: #c0392b;
+    --red-light: #fdecea;
+    --amber: #e67e22;
+    --amber-light: #fef3e2;
+    --gray: #6b7280;
+    --gray-light: #f3f4f6;
+    --border: #e5e7eb;
+    --text: #111827;
+    --text-muted: #6b7280;
+    --bg: #f9fafb;
+    --card: #ffffff;
+    --radius: 12px;
+    --radius-sm: 8px;
+  }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    padding-bottom: 40px;
+  }
+
+  /* HEADER */
+  .header {
+    background: var(--green);
+    color: white;
+    padding: 20px 16px 16px;
+    text-align: center;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+  }
+  .header h1 { font-size: 18px; font-weight: 700; letter-spacing: -0.3px; }
+  .header p { font-size: 12px; opacity: 0.8; margin-top: 2px; }
+
+  /* SCOREBOARD */
+  .scoreboard {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    padding: 14px 12px;
+    background: white;
+    border-bottom: 1px solid var(--border);
+  }
+  .score-card {
+    background: var(--gray-light);
+    border-radius: var(--radius-sm);
+    padding: 10px 8px;
+    text-align: center;
+  }
+  .score-card.leader {
+    background: var(--green-light);
+    outline: 2px solid var(--green-mid);
+  }
+  .score-card .player-name {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-bottom: 4px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    cursor: pointer;
+  }
+  .score-card.leader .player-name { color: var(--green); }
+  .score-card .pts {
+    font-size: 26px;
+    font-weight: 700;
+    color: var(--text);
+    line-height: 1;
+  }
+  .score-card.leader .pts { color: var(--green); }
+  .score-card .pts-label {
+    font-size: 10px;
+    color: var(--text-muted);
+    margin-top: 2px;
+  }
+
+  /* SECTION */
+  .section-label {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-muted);
+    padding: 16px 14px 6px;
+  }
+
+  /* FIXTURE CARD */
+  .fixture {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    margin: 0 10px 10px;
+    overflow: hidden;
+  }
+  .fixture-header {
+    padding: 12px 14px 10px;
+    border-bottom: 1px solid var(--border);
+  }
+  .fixture-num {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-muted);
+    margin-bottom: 6px;
+  }
+  .teams-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .team-input {
+    flex: 1;
+    border: none;
+    border-bottom: 1.5px solid var(--border);
+    background: transparent;
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text);
+    padding: 2px 0;
+    outline: none;
+    min-width: 0;
+  }
+  .team-input::placeholder { color: var(--text-muted); font-weight: 400; font-size: 14px; }
+  .team-input:focus { border-bottom-color: var(--green); }
+  .vs-badge {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--text-muted);
+    background: var(--gray-light);
+    padding: 3px 8px;
+    border-radius: 20px;
+    flex-shrink: 0;
+  }
+
+  /* RESULT ROW */
+  .result-row {
+    display: flex;
+    align-items: center;
+    padding: 8px 14px;
+    border-bottom: 1px solid var(--border);
+    gap: 10px;
+  }
+  .result-label { font-size: 12px; color: var(--text-muted); width: 56px; flex-shrink: 0; }
+  .wdl-group { display: flex; gap: 5px; }
+  .wdl-btn {
+    padding: 5px 12px;
+    border-radius: 20px;
+    border: 1.5px solid var(--border);
+    background: transparent;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.15s;
+    color: var(--text-muted);
+    -webkit-tap-highlight-color: transparent;
+  }
+  .wdl-btn:active { transform: scale(0.94); }
+  .wdl-btn.active-W { background: var(--green-light); border-color: var(--green); color: var(--green); }
+  .wdl-btn.active-D { background: var(--amber-light); border-color: var(--amber); color: var(--amber); }
+  .wdl-btn.active-L { background: var(--red-light); border-color: var(--red); color: var(--red); }
+  .result-badge {
+    margin-left: auto;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 3px 10px;
+    border-radius: 20px;
+  }
+  .badge-correct { background: var(--green-light); color: var(--green); }
+  .badge-wrong { background: var(--red-light); color: var(--red); }
+
+  /* PREDICTIONS */
+  .predictions-section { padding: 8px 14px 12px; }
+  .pred-row {
+    display: flex;
+    align-items: center;
+    padding: 5px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .pred-row:last-child { border-bottom: none; }
+  .pred-name { font-size: 13px; color: var(--text); width: 80px; flex-shrink: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .pred-wdl { display: flex; gap: 5px; }
+  .pred-wdl .wdl-btn { padding: 4px 10px; font-size: 11px; }
+  .pred-pts {
+    margin-left: auto;
+    font-size: 12px;
+    font-weight: 700;
+    min-width: 40px;
+    text-align: right;
+  }
+  .pts-correct { color: var(--green); }
+  .pts-wrong { color: var(--red); }
+  .pts-pending { color: var(--text-muted); }
+
+  /* ADD BATCH */
+  .add-btn {
+    display: block;
+    width: calc(100% - 20px);
+    margin: 4px 10px 10px;
+    padding: 13px;
+    background: white;
+    border: 1.5px dashed var(--border);
+    border-radius: var(--radius);
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-muted);
+    cursor: pointer;
+    text-align: center;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .add-btn:active { background: var(--gray-light); }
+
+  /* FOOTER ACTIONS */
+  .footer-actions {
+    display: flex;
+    gap: 10px;
+    padding: 10px;
+    margin-top: 4px;
+  }
+  .footer-btn {
+    flex: 1;
+    padding: 12px;
+    border-radius: var(--radius-sm);
+    border: 1.5px solid var(--border);
+    background: white;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-muted);
+    cursor: pointer;
+    text-align: center;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .footer-btn:active { background: var(--gray-light); }
+  .footer-btn.danger { color: var(--red); border-color: var(--red-light); }
+
+  /* RENAME MODAL */
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.45);
+    z-index: 200;
+    align-items: flex-end;
+    justify-content: center;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal {
+    background: white;
+    border-radius: 20px 20px 0 0;
+    padding: 24px 20px 36px;
+    width: 100%;
+    max-width: 480px;
+  }
+  .modal h3 { font-size: 16px; font-weight: 700; margin-bottom: 14px; }
+  .modal input {
+    width: 100%;
+    padding: 12px 14px;
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-sm);
+    font-size: 16px;
+    outline: none;
+    color: var(--text);
+    margin-bottom: 12px;
+  }
+  .modal input:focus { border-color: var(--green); }
+  .modal-btns { display: flex; gap: 10px; }
+  .modal-btns button {
+    flex: 1; padding: 12px; border-radius: var(--radius-sm);
+    font-size: 15px; font-weight: 700; cursor: pointer; border: none;
+  }
+  .btn-cancel { background: var(--gray-light); color: var(--text-muted); }
+  .btn-save { background: var(--green); color: white; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>⚽ World Cup Predictor</h1>
+  <p>Correct: +3 pts &nbsp;·&nbsp; Wrong: −1 pt</p>
+</div>
+
+<div class="scoreboard" id="scoreboard"></div>
+<div id="batches"></div>
+<button class="add-btn" onclick="addBatch()">+ Add next 4 fixtures</button>
+<div class="footer-actions">
+  <button class="footer-btn danger" onclick="resetAll()">Reset all</button>
+</div>
+
+<!-- Rename modal -->
+<div class="modal-overlay" id="modal">
+  <div class="modal">
+    <h3>Rename player</h3>
+    <input type="text" id="modal-input" maxlength="20" />
+    <div class="modal-btns">
+      <button class="btn-cancel" onclick="closeModal()">Cancel</button>
+      <button class="btn-save" onclick="saveModal()">Save</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const KEY = 'wc_predictor_v3';
+let editingPlayer = null;
+
+function defaultBatch(n) {
+  return {
+    id: n,
+    fixtures: Array.from({length: 4}, (_, i) => ({
+      id: `b${n}f${i}`,
+      home: '', away: '',
+      actual: null,
+      preds: [null, null, null]
+    }))
+  };
+}
+
+let state = (() => {
+  try { const d = localStorage.getItem(KEY); if (d) return JSON.parse(d); } catch(e) {}
+  return { names: ['Player 1', 'Player 2', 'Player 3'], batches: [defaultBatch(1)] };
+})();
+
+function save() { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch(e) {} }
+
+function calcTotals() {
+  const t = [0, 0, 0];
+  state.batches.forEach(b => b.fixtures.forEach(f => {
+    if (f.actual === null) return;
+    f.preds.forEach((p, i) => {
+      if (p === null) return;
+      t[i] += p === f.actual ? 3 : -1;
+    });
+  }));
+  return t;
+}
+
+function render() {
+  renderScoreboard();
+  renderBatches();
+}
+
+function renderScoreboard() {
+  const totals = calcTotals();
+  const max = Math.max(...totals);
+  const anyPlayed = state.batches.some(b => b.fixtures.some(f => f.actual !== null));
+  document.getElementById('scoreboard').innerHTML = state.names.map((n, i) => `
+    <div class="score-card ${anyPlayed && totals[i] === max ? 'leader' : ''}" onclick="openModal(${i})">
+      <div class="player-name" title="Tap to rename">${esc(n)}</div>
+      <div class="pts">${totals[i]}</div>
+      <div class="pts-label">pts</div>
+    </div>
+  `).join('');
+}
+
+function renderBatches() {
+  document.getElementById('batches').innerHTML = state.batches.map((b, bi) => `
+    <div class="section-label">Batch ${b.id} &mdash; Games ${bi*4+1}–${bi*4+4}</div>
+    ${b.fixtures.map((f, fi) => renderFixture(f, bi, fi)).join('')}
+  `).join('');
+}
+
+function renderFixture(f, bi, fi) {
+  const num = bi * 4 + fi + 1;
+
+  const resultWdl = ['W','D','L'].map(v => `
+    <button class="wdl-btn ${f.actual === v ? 'active-'+v : ''}"
+      onclick="setActual(${bi},${fi},'${v}')">${v}</button>
+  `).join('');
+
+  const resultBadge = (() => {
+    const anyPred = f.preds.some(p => p !== null);
+    if (f.actual === null || !anyPred) return '';
+    return '';
+  })();
+
+  const predsHtml = state.names.map((n, pi) => {
+    const p = f.preds[pi];
+    let ptsHtml = '<span class="pred-pts pts-pending">—</span>';
+    if (f.actual !== null && p !== null) {
+      const correct = p === f.actual;
+      ptsHtml = `<span class="pred-pts ${correct ? 'pts-correct' : 'pts-wrong'}">${correct ? '+3' : '−1'}</span>`;
+    }
+    return `<div class="pred-row">
+      <div class="pred-name">${esc(n)}</div>
+      <div class="pred-wdl">
+        ${['W','D','L'].map(v => `
+          <button class="wdl-btn ${p === v ? 'active-'+v : ''}"
+            onclick="setPred(${bi},${fi},${pi},'${v}')">${v}</button>
+        `).join('')}
+      </div>
+      ${ptsHtml}
+    </div>`;
+  }).join('');
+
+  return `<div class="fixture">
+    <div class="fixture-header">
+      <div class="fixture-num">Game ${num}</div>
+      <div class="teams-row">
+        <input class="team-input" placeholder="Home team" value="${esc(f.home)}"
+          oninput="setTeam(${bi},${fi},'home',this.value)" />
+        <span class="vs-badge">VS</span>
+        <input class="team-input" placeholder="Away team" value="${esc(f.away)}"
+          oninput="setTeam(${bi},${fi},'away',this.value)" />
+      </div>
+    </div>
+    <div class="result-row">
+      <span class="result-label">Result</span>
+      <div class="wdl-group">${resultWdl}</div>
+      <span style="font-size:11px;color:var(--text-muted);margin-left:auto;">Home wins = W</span>
+    </div>
+    <div class="predictions-section">${predsHtml}</div>
+  </div>`;
+}
+
+function setTeam(bi, fi, side, val) {
+  state.batches[bi].fixtures[fi][side] = val;
+  save();
+}
+function setActual(bi, fi, val) {
+  const f = state.batches[bi].fixtures[fi];
+  f.actual = f.actual === val ? null : val;
+  save(); render();
+}
+function setPred(bi, fi, pi, val) {
+  const f = state.batches[bi].fixtures[fi];
+  f.preds[pi] = f.preds[pi] === val ? null : val;
+  save(); render();
+}
+function addBatch() {
+  state.batches.push(defaultBatch(state.batches.length + 1));
+  save(); render();
+}
+function resetAll() {
+  if (!confirm('Reset everything? This cannot be undone.')) return;
+  state = { names: ['Player 1', 'Player 2', 'Player 3'], batches: [defaultBatch(1)] };
+  save(); render();
+}
+function openModal(i) {
+  editingPlayer = i;
+  document.getElementById('modal-input').value = state.names[i];
+  document.getElementById('modal').classList.add('open');
+  setTimeout(() => document.getElementById('modal-input').focus(), 100);
+}
+function closeModal() {
+  document.getElementById('modal').classList.remove('open');
+  editingPlayer = null;
+}
+function saveModal() {
+  if (editingPlayer === null) return;
+  const val = document.getElementById('modal-input').value.trim();
+  if (val) state.names[editingPlayer] = val;
+  save(); closeModal(); render();
+}
+document.getElementById('modal-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter') saveModal();
+  if (e.key === 'Escape') closeModal();
+});
+document.getElementById('modal').addEventListener('click', e => {
+  if (e.target === document.getElementById('modal')) closeModal();
+});
+function esc(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+render();
+</script>
+</body>
+</html>
